@@ -81,17 +81,21 @@ cd myphp
 
 This is the easiest way to get the project running without installing PHP or MySQL directly on your machine.
 
-1.  **Create the environment file:**
+1.  **Install dependencies:**
+    ```bash
+    composer install
+    ```
+2.  **Create the environment file:**
     Copy the `.env.example` file to `.env`. The provided `.env` is pre-configured to work with Docker.
     ```bash
     cp .env.example .env
     ```
-2.  **Build and start the containers:**
+3.  **Build and start the containers:**
     This command will automatically build the images and start the PHP, Nginx, and MySQL containers.
     ```bash
     docker-compose up -d --build
     ```
-3.  **Access the application:**
+4.  **Access the application:**
     Once the containers are up and running, the application will be accessible at:
     [http://localhost:8000](http://localhost:8000)
 
