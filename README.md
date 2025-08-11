@@ -123,11 +123,11 @@ php artisan test
 #
 #
 # Trả lời câu hỏi còn nợ:
-## Câu trả lời lúc interview:
+### Câu trả lời lúc interview:
 Dùng lock database transaction để xử lý asynchronous lúc users claim giftcodes
 -> Điểm yếu: bị tải lên database (quá nhiều connections đợi lock)
 
-Giải pháp:
+### Câu trả lời cuối cùng:
 Tích hợp queue vào logic xử lý để chuyển thời gian đợi ở db về server. Như vậy sẽ không phải tốn connections với transaction của db. Nhưng scale sẽ khó khăn, vì là queue local nên chỉ có thể scale vertical.
 
 Nếu muốn scale thành nhiều instances thì bắt buộc phải lock hoặc tập trung tại một nơi nào đó. Ở đây em suy nghĩ tới rpc queue (RabbitMQ,...), sẽ đảm bảo được thứ tự thực thi, số lượng connections database không bị quá tải và có thể chạy đồng thời nhiều instances. Đánh đổi là implementation sẽ phức tạp hơn.
