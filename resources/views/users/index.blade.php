@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Users Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -24,12 +25,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        @if(session('success'))
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                {{ session('success') }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        @endif
+                        <div id="alert-container"></div>
 
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -61,10 +57,46 @@
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+    // Set up axios defaults
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
     document.addEventListener('DOMContentLoaded', function () {
         const usersTableBody = document.getElementById('users-table-body');
         const loadingRow = document.getElementById('loading-row');
         const paginationContainer = document.getElementById('pagination-container');
+        const alertContainer = document.getElementById('alert-container');
+
+        function showAlert(message, type) {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+
+        function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"?`)) {
+                return;
+            }
+
+            const deleteBtn = document.querySelector(`[data-delete-user="${userId}"]`);
+            const originalContent = deleteBtn.innerHTML;
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            axios.delete(`/api/users/${userId}`)
+                .then(function (response) {
+                    showAlert('User deleted successfully!', 'success');
+                    fetchUsers(); // Reload the table
+                })
+                .catch(function (error) {
+                    const message = error.response?.data?.message || 'An error occurred while deleting the user.';
+                    showAlert(message, 'danger');
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = originalContent;
+                });
+        }
 
         function fetchUsers(url = '/api/users') {
             axios.get(url)
@@ -94,13 +126,11 @@
                                             <a href="/users/${user.id}/edit" class="btn btn-sm btn-warning me-2">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form action="/users/${user.id}" method="POST" class="me-2" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="_method" value="DELETE">
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-danger me-2" 
+                                                    data-delete-user="${user.id}" 
+                                                    onclick="deleteUser(${user.id}, '${user.name}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                             <a href="/posts/create?user_id=${user.id}" class="btn btn-sm btn-success">
                                                 <i class="fas fa-pen"></i>
                                             </a>
@@ -116,6 +146,8 @@
                 })
                 .catch(function (error) {
                     console.error('Error fetching users:', error);
+                    const message = error.response?.data?.message || 'Error loading users.';
+                    showAlert(message, 'danger');
                     usersTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Error loading users.</td></tr>';
                 });
         }
@@ -156,6 +188,9 @@
             nav.appendChild(ul);
             paginationContainer.appendChild(nav);
         }
+
+        // Make deleteUser function globally available
+        window.deleteUser = deleteUser;
 
         fetchUsers();
     });
